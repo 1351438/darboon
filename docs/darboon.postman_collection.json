@@ -1,0 +1,440 @@
+{
+  "info": {
+    "name": "Darboon IDP",
+    "_postman_id": "e2a1c0d4-7b6f-4c2a-9a3e-darboonidp001",
+    "description": "OAuth2/OIDC Identity Provider — authentication, RBAC tokens, OTP, Google, self-service, and admin. Set the `baseUrl`, `clientId`, and `adminApiKey` collection/environment variables. Token responses auto-save `accessToken` and `refreshToken`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "clientId", "value": "darboon-admin" },
+    { "key": "username", "value": "admin@example.com" },
+    { "key": "password", "value": "change-me-immediately" },
+    { "key": "identifier", "value": "+15551234567" },
+    { "key": "adminApiKey", "value": "your-admin-api-key" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "mfaToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "OIDC",
+      "item": [
+        {
+          "name": "Discovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/.well-known/openid-configuration"
+          }
+        },
+        {
+          "name": "JWKS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/.well-known/jwks.json"
+          }
+        },
+        {
+          "name": "Userinfo",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/userinfo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Token — password grant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', b.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', b.refresh_token);",
+                  "}",
+                  "if (b.mfa_required) { pm.collectionVariables.set('mfaToken', b.mfa_token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grant_type\": \"password\",\n  \"client_id\": \"{{clientId}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"scope\": \"openid profile email\"\n}"
+            },
+            "url": "{{baseUrl}}/oauth/token"
+          }
+        },
+        {
+          "name": "Login — password (convenience)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"identifier\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"scope\": \"openid\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login/password"
+          }
+        },
+        {
+          "name": "OTP — request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"identifier\": \"{{identifier}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/otp/request"
+          }
+        },
+        {
+          "name": "Token — OTP grant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', b.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', b.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grant_type\": \"urn:darboon:otp\",\n  \"client_id\": \"{{clientId}}\",\n  \"identifier\": \"{{identifier}}\",\n  \"otp_code\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/oauth/token"
+          }
+        },
+        {
+          "name": "Token — refresh (rotates)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', b.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', b.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grant_type\": \"refresh_token\",\n  \"client_id\": \"{{clientId}}\",\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/oauth/token"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        },
+        {
+          "name": "Revoke",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"token\": \"{{refreshToken}}\",\n  \"token_type_hint\": \"refresh_token\"\n}"
+            },
+            "url": "{{baseUrl}}/oauth/revoke"
+          }
+        },
+        {
+          "name": "Introspect",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{accessToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/oauth/introspect"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Google",
+      "item": [
+        {
+          "name": "Initiate (open in browser)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/google/initiate?client_id={{clientId}}&redirect_uri=https://s1.domain.com/callback"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Self-service",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"phone\": \"+15551234567\",\n  \"password\": \"super-secret-123\"\n}"
+            },
+            "url": "{{baseUrl}}/register"
+          }
+        },
+        {
+          "name": "Confirm email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<token-from-email>\"\n}"
+            },
+            "url": "{{baseUrl}}/verify/email/confirm"
+          }
+        },
+        {
+          "name": "Verify phone — request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+15551234567\"\n}"
+            },
+            "url": "{{baseUrl}}/verify/phone/request"
+          }
+        },
+        {
+          "name": "Verify phone — confirm",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+15551234567\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/verify/phone/confirm"
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"ada@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/recovery/forgot-password"
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<reset-token>\",\n  \"newPassword\": \"new-super-secret-123\"\n}"
+            },
+            "url": "{{baseUrl}}/recovery/reset-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/applications"
+          }
+        },
+        {
+          "name": "Create application",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dashboard S1\",\n  \"audience\": \"s1\",\n  \"clientId\": \"s1\",\n  \"redirectUris\": [\"https://s1.domain.com/callback\"],\n  \"allowedGrantTypes\": [\"password\", \"refresh_token\", \"otp\", \"urn:darboon:google\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/applications"
+          }
+        },
+        {
+          "name": "Create role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"editor\",\n  \"description\": \"Can edit content\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/applications/:appId/roles"
+          }
+        },
+        {
+          "name": "Create permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"invoices:read\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/applications/:appId/permissions"
+          }
+        },
+        {
+          "name": "Set role permissions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionIds\": [\"<permission-id>\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/roles/:roleId/permissions"
+          }
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/users?query=ada"
+          }
+        },
+        {
+          "name": "Assign role to user",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{adminApiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"<application-id>\",\n  \"roleId\": \"<role-id>\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/:userId/roles"
+          }
+        },
+        {
+          "name": "List user sessions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/users/:userId/sessions"
+          }
+        },
+        {
+          "name": "Revoke all user sessions",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/users/:userId/sessions"
+          }
+        },
+        {
+          "name": "Query audit log",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/audit?limit=50"
+          }
+        },
+        {
+          "name": "Rotate signing keys",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-API-Key", "value": "{{adminApiKey}}" }],
+            "url": "{{baseUrl}}/admin/keys/rotate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ops",
+      "item": [
+        {
+          "name": "Health (liveness)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "Ready (DB + Redis)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/health/ready" }
+        },
+        {
+          "name": "Metrics",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/metrics" }
+        }
+      ]
+    }
+  ]
+}
