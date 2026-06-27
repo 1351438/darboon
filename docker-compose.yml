@@ -1,0 +1,130 @@
+services:
+  # ── Darboon API (HTTP: auth, token, OIDC, admin) ─────────────────────────────
+  darboon-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DARBOON_ROLE: api
+      # Apply pending migrations from a single instance (the API) on startup.
+      RUN_MIGRATIONS: 'true'
+      # Connection URLs must point at compose service names (not localhost).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-darboon}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-darboon}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CHAPAR_BASE_URL: http://chapar:3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - darboon-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Darboon Worker (OTP SMS, email, key rotation) ────────────────────────────
+  darboon-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DARBOON_ROLE: worker
+      # Workers never run migrations (the API owns that to avoid races).
+      RUN_MIGRATIONS: 'false'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-darboon}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-darboon}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CHAPAR_BASE_URL: http://chapar:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - darboon-net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-darboon}
+      POSTGRES_USER: ${POSTGRES_USER:-darboon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - darboon-net
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-darboon}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --appendonly yes
+    volumes:
+      - redisdata:/data
+    networks:
+      - darboon-net
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── chapar notification gateway (SMS provider for OTP) ───────────────────────
+  # Build from the sibling repo, or replace `build` with a published `image`.
+  chapar:
+    build:
+      context: ../chapar
+      dockerfile: Dockerfile
+      target: runner
+    env_file: ../chapar/.env
+    environment:
+      NODE_ENV: production
+      CHAPAR_ROLE: all
+      RUN_MIGRATIONS: 'true'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-darboon}:${POSTGRES_PASSWORD}@postgres:5432/chapar
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      REDIS_PUBSUB_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - darboon-net
+    profiles: ['with-chapar']
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  darboon-net:
+    driver: bridge
