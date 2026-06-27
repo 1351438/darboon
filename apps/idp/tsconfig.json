@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    // Disabled so `nest build` (which wipes dist but not the tsbuildinfo) always
+    // performs a full emit rather than skipping unchanged sources.
+    "incremental": false
+  },
+  "include": ["src/**/*.ts"]
+}
