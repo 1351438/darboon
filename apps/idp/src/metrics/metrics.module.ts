@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import {
   makeCounterProvider,
   makeHistogramProvider,
 } from '@willsoto/nestjs-prometheus';
 import { MetricsService } from './metrics.service';
 
+@Global()
 @Module({
   providers: [
     MetricsService,

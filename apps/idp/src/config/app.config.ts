@@ -41,10 +41,13 @@ export const validationSchema = Joi.object({
   OTP_MAX_ATTEMPTS: Joi.number().default(5),
   OTP_RESEND_WINDOW_SECONDS: Joi.number().default(60),
 
-  // ── Google social login ─────────────────────────────────────────────────────
+  // ── Social login (optional in V1) ──────────────────────────────────────────
   GOOGLE_CLIENT_ID: Joi.string().optional(),
   GOOGLE_CLIENT_SECRET: Joi.string().optional(),
   GOOGLE_REDIRECT_URI: Joi.string().uri().optional(),
+  GITHUB_CLIENT_ID: Joi.string().optional(),
+  GITHUB_CLIENT_SECRET: Joi.string().optional(),
+  GITHUB_REDIRECT_URI: Joi.string().uri().optional(),
 
   // ── Password hashing (argon2id) ─────────────────────────────────────────────
   ARGON_MEMORY_COST: Joi.number().default(19456), // KiB (~19 MiB)

@@ -10,7 +10,7 @@ client that exercises **every** client-facing Darboon flow:
 - rotating refresh + **reuse-detection** demo
 - userinfo, logout, revoke, introspect
 - password recovery (forgot / reset)
-- Sign in with Google (build the redirect URL + consume the callback fragment)
+- Sign in with Google or GitHub (build the redirect URL + consume the callback fragment)
 - resource-service token verification against the JWKS
 
 It uses only the global `fetch` (Node ≥ 18) and `readline`. `jose` is an optional

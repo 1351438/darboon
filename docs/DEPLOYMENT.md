@@ -39,6 +39,7 @@ All config is environment-driven and validated at boot (Joi). See
 | `ADMIN_BOOTSTRAP_EMAIL` / `_PASSWORD` | Seeds the first admin on initial start |
 | `CORS_ALLOWED_ORIGINS` | Exact dashboard origins (never `*` in prod) |
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | Only if Google login is enabled |
+| `GITHUB_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | Only if GitHub login is enabled |
 
 Generate the admin key hash:
 

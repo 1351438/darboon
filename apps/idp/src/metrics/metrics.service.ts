@@ -21,7 +21,7 @@ export class MetricsService {
     private readonly issueHistogram: Histogram<string>,
   ) {}
 
-  /** result: 'success' | 'failure' | 'mfa_required'; method: 'password' | 'otp' | 'google'. */
+  /** result: 'success' | 'failure' | 'mfa_required'; method: 'password' | 'otp' | 'google' | 'github'. */
   incLogin(method: string, result: string): void {
     this.loginsCounter.inc({ method, result });
   }

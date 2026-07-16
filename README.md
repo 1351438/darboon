@@ -47,7 +47,7 @@ roles/profiles per dashboard**:
 
 ## V1.0.0 features
 
-- **Login methods:** username/email + password, OTP-over-SMS, Sign in with Google.
+- **Login methods:** username/email + password, OTP-over-SMS, Sign in with Google, Sign in with GitHub.
 - **MFA:** password + OTP second factor (extensible factor model).
 - **Tokens:** JWT access tokens (ES256, RS256 configurable) + rotating opaque
   refresh tokens with **family-wide reuse detection**.
@@ -65,7 +65,7 @@ roles/profiles per dashboard**:
 
 > **API-first / direct-grant:** V1 has **no hosted login UI**. Trusted first-party
 > dashboards render their own forms and call Darboon's endpoints directly. Google
-> uses redirect callbacks only. Authorization-Code + PKCE + hosted UI is a planned
+> and GitHub use redirect callbacks only. Authorization-Code + PKCE + hosted UI is a planned
 > additive V1.x extension — the token/JWKS/discovery layer is already standards-compliant.
 
 ## Repository layout
@@ -106,6 +106,7 @@ darboon/
 | POST | `/auth/logout` · `/oauth/revoke` | Revoke refresh/access tokens (RFC 7009) |
 | POST | `/oauth/introspect` | Token introspection (RFC 7662, API-key auth) |
 | GET | `/auth/google/initiate` · `/auth/google/callback` | Google sign-in (redirect-only) |
+| GET | `/auth/github/initiate` · `/auth/github/callback` | GitHub sign-in (redirect-only) |
 | GET | `/.well-known/openid-configuration` · `/.well-known/jwks.json` · `/userinfo` | OIDC |
 | POST | `/register` · `/verify/{email,phone}/*` · `/recovery/*` | Self-service |
 | * | `/admin/*` | Applications, roles, permissions, users, assignments, sessions, audit, keys |

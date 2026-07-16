@@ -18,6 +18,7 @@ import { NotificationModule } from './notification/notification.module';
 import { OtpModule } from './otp/otp.module';
 import { AuthModule } from './auth/auth.module';
 import { GoogleModule } from './google/google.module';
+import { GithubModule } from './github/github.module';
 import { AdminModule } from './admin/admin.module';
 import { RegistrationModule } from './registration/registration.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
@@ -61,6 +62,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
     OtpModule,
     AuthModule,
     GoogleModule,
+    GithubModule,
     AdminModule,
     RegistrationModule,
     BootstrapModule,

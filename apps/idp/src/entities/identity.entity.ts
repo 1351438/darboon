@@ -3,9 +3,10 @@ import { v4 as uuid } from 'uuid';
 
 export enum IdentityProvider {
   GOOGLE = 'google',
+  GITHUB = 'github',
 }
 
-/** A federated login linked to a Darboon user (e.g. Sign in with Google). */
+/** A federated login linked to a Darboon user (e.g. Google or GitHub). */
 export class Identity {
   id: string = uuid();
   userId!: string;

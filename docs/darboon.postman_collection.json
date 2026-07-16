@@ -215,6 +215,19 @@
       ]
     },
     {
+      "name": "GitHub",
+      "item": [
+        {
+          "name": "Initiate (open in browser)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/github/initiate?client_id={{clientId}}&redirect_uri=https://s1.domain.com/callback"
+          }
+        }
+      ]
+    },
+    {
       "name": "Self-service",
       "item": [
         {
@@ -312,7 +325,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Dashboard S1\",\n  \"audience\": \"s1\",\n  \"clientId\": \"s1\",\n  \"redirectUris\": [\"https://s1.domain.com/callback\"],\n  \"allowedGrantTypes\": [\"password\", \"refresh_token\", \"otp\", \"urn:darboon:google\"]\n}"
+              "raw": "{\n  \"name\": \"Dashboard S1\",\n  \"audience\": \"s1\",\n  \"clientId\": \"s1\",\n  \"redirectUris\": [\"https://s1.domain.com/callback\"],\n  \"allowedGrantTypes\": [\"password\", \"refresh_token\", \"otp\", \"urn:darboon:google\", \"urn:darboon:github\"]\n}"
             },
             "url": "{{baseUrl}}/admin/applications"
           }

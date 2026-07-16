@@ -11,6 +11,7 @@ export enum GrantType {
   OTP = 'otp',
   REFRESH_TOKEN = 'refresh_token',
   GOOGLE = 'urn:darboon:google',
+  GITHUB = 'urn:darboon:github',
 }
 
 /**

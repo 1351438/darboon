@@ -285,19 +285,30 @@ export class DarboonClient {
 
   // ── Sign in with Google (redirect-only) ─────────────────────────────────────
   /** Build the URL to open in a browser; tokens come back in the callback fragment. */
-  googleInitiateUrl(redirectUri: string): string {
+  private federatedInitiateUrl(
+    provider: 'google' | 'github',
+    redirectUri: string,
+  ): string {
     const q = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: redirectUri,
     });
-    return `${this.baseUrl}/auth/google/initiate?${q.toString()}`;
+    return `${this.baseUrl}/auth/${provider}/initiate?${q.toString()}`;
+  }
+
+  googleInitiateUrl(redirectUri: string): string {
+    return this.federatedInitiateUrl('google', redirectUri);
+  }
+
+  githubInitiateUrl(redirectUri: string): string {
+    return this.federatedInitiateUrl('github', redirectUri);
   }
 
   /**
    * Parse the tokens Darboon places in the callback URL fragment:
    * https://app/callback#access_token=…&refresh_token=…&token_type=Bearer&expires_in=900
    */
-  consumeGoogleCallback(callbackUrl: string): TokenSet {
+  private consumeFederatedCallback(callbackUrl: string): TokenSet {
     const fragment = callbackUrl.split('#')[1] ?? '';
     const p = new URLSearchParams(fragment);
     const tokens: TokenSet = {
@@ -307,6 +318,14 @@ export class DarboonClient {
       expires_in: Number(p.get('expires_in') ?? 0),
     };
     return this.rememberTokens(tokens);
+  }
+
+  consumeGoogleCallback(callbackUrl: string): TokenSet {
+    return this.consumeFederatedCallback(callbackUrl);
+  }
+
+  consumeGithubCallback(callbackUrl: string): TokenSet {
+    return this.consumeFederatedCallback(callbackUrl);
   }
 
   // ── Resource-service side: verify an access token against the JWKS ──────────

@@ -41,11 +41,12 @@ export class KeyService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     // Only the migration-owning / API role bootstraps keys to avoid races.
     if (process.env.DARBOON_ROLE === 'worker') return;
-    const active = await this.em.findOne(SigningKey, {
+    const em = this.em.fork();
+    const active = await em.findOne(SigningKey, {
       status: SigningKeyStatus.ACTIVE,
     });
     if (!active) {
-      await this.generateKey(SigningKeyStatus.ACTIVE);
+      await this.generateKeyWithEm(em, SigningKeyStatus.ACTIVE);
       this.logger.log('Bootstrapped initial active signing key');
     }
   }
@@ -62,6 +63,13 @@ export class KeyService implements OnModuleInit {
 
   /** Generate, encrypt, and persist a new keypair with the given status. */
   async generateKey(status: SigningKeyStatus): Promise<SigningKey> {
+    return this.generateKeyWithEm(this.em, status);
+  }
+
+  private async generateKeyWithEm(
+    em: EntityManager,
+    status: SigningKeyStatus,
+  ): Promise<SigningKey> {
     const alg = this.alg;
     const { publicKey, privateKey } = await generateKeyPair(alg, {
       extractable: true,
@@ -74,7 +82,7 @@ export class KeyService implements OnModuleInit {
     publicJwk.alg = alg;
     publicJwk.use = 'sig';
 
-    const entity = this.em.create(SigningKey, {
+    const entity = em.create(SigningKey, {
       kid,
       alg,
       publicJwk: publicJwk as unknown as Record<string, unknown>,
@@ -83,8 +91,8 @@ export class KeyService implements OnModuleInit {
       notBefore: new Date(),
       expiresAt: new Date(Date.now() + this.lifetimeMs),
     } as SigningKey);
-    this.em.persist(entity);
-    await this.em.flush();
+    em.persist(entity);
+    await em.flush();
     return entity;
   }
 

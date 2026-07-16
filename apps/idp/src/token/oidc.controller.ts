@@ -36,6 +36,7 @@ export class OidcController {
         'refresh_token',
         'urn:darboon:otp',
         'urn:darboon:google',
+        'urn:darboon:github',
       ],
       token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
       subject_types_supported: ['public'],

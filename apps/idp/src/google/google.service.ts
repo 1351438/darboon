@@ -5,20 +5,15 @@ import { createHash, randomBytes } from 'crypto';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import Redis from 'ioredis';
 import { v4 as uuid } from 'uuid';
-import {
-  Application,
-  GrantType,
-  Identity,
-  IdentityProvider,
-  User,
-  UserStatus,
-} from '../entities';
+import { Application, GrantType, IdentityProvider } from '../entities';
 import { ApplicationsService } from '../applications/applications.service';
+import { UsersService } from '../users/users.service';
 import { TokenService, TokenSet } from '../token/token.service';
 import { AuditService } from '../audit/audit.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { InjectRedis } from '../redis/redis.module';
 import { OAuthError } from '../common/oauth-error';
+import { linkOrCreateFederatedUser } from '../common/federated-identity';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -47,6 +42,7 @@ export class GoogleService {
     private readonly em: EntityManager,
     private readonly config: ConfigService,
     private readonly applications: ApplicationsService,
+    private readonly users: UsersService,
     private readonly tokenService: TokenService,
     private readonly audit: AuditService,
     private readonly metrics: MetricsService,
@@ -137,7 +133,28 @@ export class GoogleService {
       throw OAuthError.invalidClient('Client no longer exists');
     }
 
-    const user = await this.linkOrCreate(claims);
+    const user = await linkOrCreateFederatedUser(this.em, {
+      provider: IdentityProvider.GOOGLE,
+      providerSubject: claims.sub,
+      email: claims.email,
+      emailVerified: claims.emailVerified,
+      rawProfile: { name: claims.name },
+    });
+
+    if (!this.users.isLoginable(user)) {
+      await this.audit.record({
+        eventType: 'login.failure',
+        userId: user.id,
+        applicationId: app.id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { amr: ['google'], reason: 'account_not_active' },
+      });
+      this.metrics.incLogin('google', 'failure');
+      throw OAuthError.invalidGrant('Account is not active');
+    }
+
+    await this.users.registerSuccessfulLogin(user);
     const tokens = await this.tokenService.issueTokenSet(user, app, {
       amr: ['google'],
       grantType: 'google',
@@ -207,48 +224,5 @@ export class GoogleService {
       emailVerified: payload.email_verified === true,
       name: payload.name as string | undefined,
     };
-  }
-
-  /** Find the user by Google subject, link by verified email, or create one. */
-  private async linkOrCreate(claims: {
-    sub: string;
-    email?: string;
-    emailVerified: boolean;
-    name?: string;
-  }): Promise<User> {
-    const existing = await this.em.findOne(Identity, {
-      provider: IdentityProvider.GOOGLE,
-      providerSubject: claims.sub,
-    });
-    if (existing) {
-      const user = await this.em.findOne(User, { id: existing.userId });
-      if (user) return user;
-    }
-
-    let user = claims.email
-      ? await this.em.findOne(User, { email: claims.email.toLowerCase() })
-      : null;
-
-    if (!user) {
-      user = this.em.create(User, {
-        email: claims.email?.toLowerCase(),
-        emailVerified: claims.emailVerified,
-        status: UserStatus.ACTIVE,
-      } as unknown as User);
-      this.em.persist(user);
-      await this.em.flush();
-    }
-
-    const identity = this.em.create(Identity, {
-      userId: user.id,
-      provider: IdentityProvider.GOOGLE,
-      providerSubject: claims.sub,
-      email: claims.email,
-      rawProfile: { name: claims.name },
-    } as unknown as Identity);
-    this.em.persist(identity);
-    await this.em.flush();
-
-    return user;
   }
 }
